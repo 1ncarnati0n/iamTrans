@@ -16,10 +16,12 @@
   const BREAK = [BLOCK, 'table,ul,ol,hr', HARD].join(',');
   // Formatting kept in the translation (shallow-cloned around the translated words).
   const FORMAT = 'a,b,strong,em,i,u,s,mark,small,sub,sup,abbr,cite,q,del,ins,font,span[class],span[style]';
-  const BATCH_CHARS = 4000, BATCH_ITEMS = 25;
+  const BATCH_CHARS = 1500, BATCH_ITEMS = 8, CONCURRENCY = 4; // small batches in parallel: first text shows sooner
 
   let engine = null, translator = null, io = null, mo = null, timer = null;
   const queue = new Set();
+  const pending = []; // batches waiting for a free request slot
+  let active = 0, gen = 0; // gen bumps on restore, so late responses from before it are dropped
   let seen = new WeakSet();
   const cache = new Map(); // text -> translation, for the current engine only
   let rendered = []; // per block: { nodes, orig, ko } for in-place replace mode
@@ -66,6 +68,7 @@
     document.documentElement.classList.remove('iat-replace');
     document.querySelector('.iat-toast')?.remove();
     engine = null;
+    gen++;
     seen = new WeakSet();
   }
 
@@ -109,7 +112,7 @@
     return { text: text.replace(/\s+/g, ' ').trim(), keep, kids, slots };
   }
 
-  async function flush() {
+  function flush() {
     const items = [];
     for (const el of queue) {
       queue.delete(el);
@@ -125,20 +128,36 @@
         chars += items[0].text.length;
         batch.push(items.shift());
       }
-      const todo = batch.filter((b) => !cache.has(b.text));
-      try {
-        if (todo.length) {
-          const out = await translate(todo.map((b) => b.text));
-          todo.forEach((b, i) => cache.set(b.text, out[i]));
-        }
-        for (const b of batch) render(b, cache.get(b.text));
-      } catch (e) {
-        // Leave failed blocks untouched and stop, instead of hiding the page behind error text.
-        console.warn('[iamTrans]', e);
-        stop();
-        toast('번역 실패: ' + e.message);
-        return;
+      pending.push(batch);
+    }
+    pump();
+  }
+
+  // At most CONCURRENCY requests in flight across all flushes, in queue (≈ top-to-bottom) order.
+  function pump() {
+    while (active < CONCURRENCY && pending.length) {
+      active++;
+      runBatch(pending.shift()).finally(() => { active--; pump(); });
+    }
+  }
+
+  async function runBatch(batch) {
+    // ponytail: the same text in two in-flight batches is requested twice; the cache only dedupes later ones
+    const todo = batch.filter((b) => !cache.has(b.text));
+    const g = gen;
+    try {
+      if (todo.length) {
+        const out = await translate(todo.map((b) => b.text));
+        if (g !== gen) return; // restored (or engine switched) meanwhile
+        todo.forEach((b, i) => cache.set(b.text, out[i]));
       }
+      for (const b of batch) render(b, cache.get(b.text));
+    } catch (err) {
+      if (g !== gen || !io) return; // already stopped (restore, or another batch failed)
+      // Leave failed blocks untouched and stop, instead of hiding the page behind error text.
+      console.warn('[iamTrans]', err);
+      stop();
+      toast('번역 실패: ' + err.message);
     }
   }
 
@@ -167,7 +186,7 @@
   }
 
   function stop() {
-    io?.disconnect(); mo?.disconnect(); io = mo = null; queue.clear();
+    io?.disconnect(); mo?.disconnect(); io = mo = null; queue.clear(); pending.length = 0;
   }
 
   function toast(text, button, onClick) {

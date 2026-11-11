@@ -19,9 +19,21 @@ chrome.commands.onCommand.addListener(async (cmd, tab) => {
 });
 
 // .env is a gitignored file next to manifest.json (unpacked install only); missing file = {}.
-async function env() {
-  const r = await fetch(chrome.runtime.getURL('.env')).catch(() => null);
-  return r?.ok ? IAT.parseEnv(await r.text()) : {};
+// Read once per service-worker lifetime; reloading the extension picks up edits.
+let envP;
+function env() {
+  return (envP ??= fetch(chrome.runtime.getURL('.env'))
+    .then(async (r) => (r.ok ? IAT.parseEnv(await r.text()) : {}))
+    .catch(() => ({})));
+}
+
+// Parallel batches can hit rate limits / overload: wait (retry-after or 1s) and try once more.
+async function post(url, init) {
+  const r = await fetch(url, init);
+  if (![429, 503, 529].includes(r.status)) return r;
+  const wait = Math.min(Number(r.headers.get('retry-after')) || 1, 10);
+  await new Promise((ok) => setTimeout(ok, wait * 1000));
+  return fetch(url, init);
 }
 
 async function run(engine, texts) {
@@ -38,7 +50,7 @@ async function run(engine, texts) {
 async function deepl(texts, key) {
   if (!key) throw new Error('DeepL API 키가 없습니다 (.env 의 DEEPL_API_KEY 또는 팝업에서 입력)');
   const host = key.endsWith(':fx') ? 'https://api-free.deepl.com' : 'https://api.deepl.com';
-  const r = await fetch(host + '/v2/translate', {
+  const r = await post(host + '/v2/translate', {
     method: 'POST',
     headers: { Authorization: 'DeepL-Auth-Key ' + key, 'Content-Type': 'application/json' },
     body: JSON.stringify({ text: texts.map(IAT.toDeeplHtml), target_lang: 'KO', tag_handling: 'html' }),
@@ -83,12 +95,15 @@ async function claude(texts, key, model, workspaceId) {
     },
     messages: [{ role: 'user', content: JSON.stringify(texts) }],
   };
+  // Translation needs no thinking; it only adds latency. Opus 5.5 can't turn it off (effort low is the limit).
+  if (/haiku/.test(model)) body.thinking = { type: 'disabled' };
+  else if (/sonnet-5-5/.test(model)) body.thinking = { type: 'between_tools' };
   // Server-side refusal fallback; Haiku has none, so only for the larger models.
   if (!/haiku/.test(model)) {
     headers['anthropic-beta'] = 'server-side-fallback-2026-07-01';
     body.fallbacks = 'default';
   }
-  const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers, body: JSON.stringify(body) });
+  const r = await post('https://api.anthropic.com/v1/messages', { method: 'POST', headers, body: JSON.stringify(body) });
   if (!r.ok) throw new Error(`Claude ${r.status}: ${await r.text()}`);
   const msg = await r.json();
   if (msg.stop_reason === 'refusal') throw new Error('Claude가 번역을 거절했습니다');
