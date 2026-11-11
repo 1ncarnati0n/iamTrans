@@ -45,6 +45,9 @@ async function ensureChromeModel() {
   for (const k of ['deeplKey', 'claudeKey', 'claudeModel']) $(k).value = s[k];
   show();
 
+  const cmd = (await chrome.commands.getAll()).find((c) => c.name === 'toggle-translate');
+  $('shortcut').textContent = `단축키 ${cmd?.shortcut || '(미지정)'}: 번역 켜기/끄기 · chrome://extensions/shortcuts 에서 변경`;
+
   document.addEventListener('change', (e) => {
     const { name, id, value } = e.target;
     const key = name || id;

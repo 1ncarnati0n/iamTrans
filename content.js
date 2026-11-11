@@ -27,6 +27,7 @@
     if (m.type === 'start') { start(m.engine); setMode(m.mode); }
     if (m.type === 'mode') setMode(m.mode);
     if (m.type === 'restore') restore();
+    if (m.type === 'toggle') { if (engine) restore(); else { start(m.engine); setMode(m.mode); } }
     send({ ok: true });
   });
 

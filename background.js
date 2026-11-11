@@ -7,6 +7,12 @@ chrome.runtime.onMessage.addListener((msg, _sender, send) => {
   return true; // async response
 });
 
+chrome.commands.onCommand.addListener(async (cmd, tab) => {
+  if (cmd !== 'toggle-translate' || !tab?.id) return;
+  const { engine = 'chrome', mode = 'bilingual' } = await chrome.storage.local.get(['engine', 'mode']);
+  chrome.tabs.sendMessage(tab.id, { type: 'toggle', engine, mode }).catch(() => {}); // chrome:// pages etc.
+});
+
 async function run(engine, texts) {
   const s = await chrome.storage.local.get(['deeplKey', 'claudeKey', 'claudeModel']);
   if (engine === 'deepl') return deepl(texts, s.deeplKey);
