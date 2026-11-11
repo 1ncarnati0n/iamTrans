@@ -14,14 +14,5 @@
 }
 .iat-toast button { margin-left: 6px; cursor: pointer; }
 
-/* Replace: hide the original's text nodes (font-size 0) and child elements, show only the translation. */
-.iat-replace .iat-src { font-size: 0 !important; }
-.iat-replace .iat-src > :not(.iat-t) { display: none !important; }
-.iat-replace .iat-t {
-  font-size: 1rem;
-  font-size: var(--iat-fs, 1rem);
-  margin-top: 0;
-  padding: 0;
-  background: none;
-}
-.iat-replace .iat-src::marker { font-size: var(--iat-fs, 1rem); }
+/* Replace: the original text nodes are swapped in place by content.js; only hide the bilingual copy. */
+.iat-replace .iat-t { display: none; }

@@ -41,6 +41,40 @@
       .replace(/&amp;/g, '&');
   };
 
-  g.IAT = { splitPH, shouldTranslate, toDeeplHtml, fromDeeplHtml };
+  // Split a translation back onto the original structure for in-place replacement.
+  // kids: {containerId: [child-marker ids in source order]} for the block root (-1) and every formatting
+  // element; ids that aren't keys are inert (code, math). Returns {containerId: [text per slot]}, where
+  // slot k is the text after the k-th child, or null when formatting markers were dropped or reordered.
+  function distribute(translated, kids) {
+    const isFmt = (id) => id in kids;
+    const got = {}, pieces = {}, stack = [-1];
+    for (const c in kids) { got[c] = []; pieces[c] = ['']; }
+    for (const p of splitPH(translated)) {
+      const top = stack[stack.length - 1];
+      if (typeof p === 'string') pieces[top][pieces[top].length - 1] += p;
+      else if (p.close) { if (top !== p.id) return null; stack.pop(); }
+      else { got[top].push(p.id); pieces[top].push(''); if (isFmt(p.id)) stack.push(p.id); }
+    }
+    if (stack.length !== 1) return null;
+    const fmt = (ids) => ids.filter(isFmt).join();
+    const out = {};
+    for (const c in kids) {
+      if (fmt(got[c]) !== fmt(kids[c])) return null;
+      if (got[c].join() === kids[c].join()) { out[c] = pieces[c]; continue; }
+      // Only inert markers moved or vanished: the code/math stays where it is in the page, so pour
+      // each stretch of text between formatting elements into the first slot of that stretch.
+      out[c] = Array(kids[c].length + 1).fill('');
+      const starts = [0];
+      kids[c].forEach((id, i) => { if (isFmt(id)) starts.push(i + 1); });
+      let seg = 0;
+      pieces[c].forEach((t, i) => {
+        if (i > 0 && isFmt(got[c][i - 1])) seg++;
+        out[c][starts[seg]] += t;
+      });
+    }
+    return out;
+  }
+
+  g.IAT = { splitPH, shouldTranslate, toDeeplHtml, fromDeeplHtml, distribute };
   if (typeof module !== 'undefined') module.exports = g.IAT;
 })(globalThis);
