@@ -29,7 +29,8 @@ async function deepl(texts, key) {
 const SYSTEM = `You translate web page text from English to natural, fluent Korean.
 Input: a JSON array of strings, each one paragraph-like block from the same page.
 Rules:
-- Keep tokens like ⟦0⟧, ⟦1⟧ exactly as written; they stand for inline code or math. Place them where they fit in the Korean sentence.
+- Keep marker tokens exactly as written. A lone ⟦n⟧ stands for inline code or math: place it where it fits in the Korean sentence.
+- A pair ⟦n⟧…⟦/n⟧ wraps formatted text (a link, bold, etc.): wrap the Korean words that correspond to it with the same pair.
 - Leave code identifiers, file paths, URLs, commands and product names untranslated.
 - Return {"t": [...]} with exactly one Korean string per input string, same order.`;
 

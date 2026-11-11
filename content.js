@@ -14,6 +14,8 @@
   const SKIP = [INERT, HARD, DROP, '.iat-t', '.iat-toast'].join(',');
   const BLOCK = 'p,li,h1,h2,h3,h4,h5,h6,td,th,dd,dt,blockquote,figcaption,caption,summary,label,div,section,article,aside,header,footer,main,nav';
   const BREAK = [BLOCK, 'table,ul,ol,hr', HARD].join(',');
+  // Formatting kept in the translation (shallow-cloned around the translated words).
+  const FORMAT = 'a,b,strong,em,i,u,s,mark,small,sub,sup,abbr,cite,q,del,ins,font,span[class],span[style]';
   const BATCH_CHARS = 4000, BATCH_ITEMS = 25;
 
   let engine = null, translator = null, io = null, mo = null, timer = null;
@@ -68,7 +70,7 @@
     }
   }
 
-  // Block -> text with ⟦n⟧ for protected inline nodes (code, math...).
+  // Block -> text with ⟦n⟧ for inert nodes (code, math...) and ⟦n⟧…⟦/n⟧ around formatting (links, bold...).
   function serialize(el) {
     const keep = [];
     let text = '';
@@ -76,9 +78,13 @@
       for (const c of n.childNodes) {
         if (c.nodeType === 3) text += c.data;
         else if (c.nodeType !== 1) continue;
-        else if (c.matches(SKIP)) { if (!c.matches(DROP)) { text += `⟦${keep.length}⟧`; keep.push(c); } }
+        else if (c.matches(SKIP)) { if (!c.matches(DROP)) { text += `⟦${keep.length}⟧`; keep.push({ node: c, inert: true }); } }
         else if (c.tagName === 'BR') text += ' ';
-        else walk(c);
+        else if (c.matches(FORMAT) && c.textContent.trim()) {
+          const id = keep.length;
+          keep.push({ node: c });
+          text += `⟦${id}⟧`; walk(c); text += `⟦/${id}⟧`;
+        } else walk(c);
       }
     })(el);
     return { text: text.replace(/\s+/g, ' ').trim(), keep };
@@ -158,8 +164,7 @@
     document.documentElement.append(t);
   }
 
-  // li > a > "text": render into the <a> so the link survives replace mode.
-  // ponytail: only whole-block wrappers; links mid-sentence still become plain text (needs paired markers).
+  // li > a > "text": render into the <a> itself so its block-level styling (menus, cards) applies.
   function target(el) {
     for (;;) {
       const kids = el.children;
@@ -176,11 +181,21 @@
     out.setAttribute('translate', 'no');
     out.lang = 'ko';
     const used = new Set();
+    const stack = [{ id: -1, node: out }];
+    const clone = (n, deep) => { const c = n.cloneNode(deep); c.removeAttribute?.('id'); return c; };
     for (const p of IAT.splitPH(translated)) {
-      if (typeof p === 'string') out.append(p);
-      else if (keep[p.id] && !used.has(p.id)) { used.add(p.id); out.append(keep[p.id].cloneNode(true)); }
+      const top = stack[stack.length - 1].node;
+      const k = keep[p.id];
+      if (typeof p === 'string') top.append(p);
+      else if (!k || (used.has(p.id) && !p.close)) continue; // unknown or duplicated marker
+      else if (p.close) {
+        const i = stack.findIndex((x) => x.id === p.id);
+        if (i > 0) stack.length = i; // also closes anything the engine left open inside it
+      } else if (k.inert) { used.add(p.id); top.append(clone(k.node, true)); }
+      else { used.add(p.id); const c = clone(k.node, false); top.append(c); stack.push({ id: p.id, node: c }); }
     }
-    keep.forEach((k, i) => { if (!used.has(i)) out.append(' ', k.cloneNode(true)); }); // engine dropped a placeholder
+    // Engine dropped an inert marker: keep the code/math anyway. Dropped formatting just becomes plain text.
+    keep.forEach((k, i) => { if (k.inert && !used.has(i)) out.append(' ', clone(k.node, true)); });
     el.style.setProperty('--iat-fs', getComputedStyle(el).fontSize);
     el.classList.add('iat-src');
     el.append(out);

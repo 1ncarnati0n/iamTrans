@@ -1,10 +1,11 @@
-/* Bilingual: translation under the original, same font. */
+/* Bilingual: translation under the original. It inherits the block's own font, size, weight and color
+   (no opacity / font overrides); only a faint background tells it apart. */
 .iat-t {
   display: block;
-  margin-top: 0.25em;
-  opacity: 0.85;
-  border-left: 2px solid #8ab4f8;
-  padding-left: 0.5em;
+  margin-top: 0.3em;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: rgba(138, 180, 248, 0.16);
 }
 .iat-toast {
   position: fixed; right: 16px; bottom: 16px; z-index: 2147483647;
@@ -20,8 +21,7 @@
   font-size: 1rem;
   font-size: var(--iat-fs, 1rem);
   margin-top: 0;
-  opacity: 1;
-  border-left: 0;
-  padding-left: 0;
+  padding: 0;
+  background: none;
 }
 .iat-replace .iat-src::marker { font-size: var(--iat-fs, 1rem); }
