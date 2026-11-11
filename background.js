@@ -1,7 +1,12 @@
 importScripts('lib.js');
 
-// API keys live in chrome.storage.local and are only read here, never in the content script.
+// API keys come from .env in the extension folder (preferred) or the popup (chrome.storage.local),
+// and are only read here, never in the content script or the popup.
 chrome.runtime.onMessage.addListener((msg, _sender, send) => {
+  if (msg.type === 'envStatus') { // tell the popup which settings .env provides, never the values
+    env().then((e) => send({ deeplKey: !!e.DEEPL_API_KEY, claudeKey: !!e.ANTHROPIC_API_KEY, claudeModel: !!e.CLAUDE_MODEL }));
+    return true;
+  }
   if (msg.type !== 'translate') return;
   run(msg.engine, msg.texts).then((result) => send({ result }), (e) => send({ error: e.message || String(e) }));
   return true; // async response
@@ -13,15 +18,24 @@ chrome.commands.onCommand.addListener(async (cmd, tab) => {
   chrome.tabs.sendMessage(tab.id, { type: 'toggle', engine, mode }).catch(() => {}); // chrome:// pages etc.
 });
 
+// .env is a gitignored file next to manifest.json (unpacked install only); missing file = {}.
+async function env() {
+  const r = await fetch(chrome.runtime.getURL('.env')).catch(() => null);
+  return r?.ok ? IAT.parseEnv(await r.text()) : {};
+}
+
 async function run(engine, texts) {
   const s = await chrome.storage.local.get(['deeplKey', 'claudeKey', 'claudeModel']);
-  if (engine === 'deepl') return deepl(texts, s.deeplKey);
-  if (engine === 'claude') return claude(texts, s.claudeKey, s.claudeModel || 'claude-opus-5-5');
+  const e = await env();
+  if (engine === 'deepl') return deepl(texts, e.DEEPL_API_KEY || s.deeplKey);
+  if (engine === 'claude') {
+    return claude(texts, e.ANTHROPIC_API_KEY || s.claudeKey, e.CLAUDE_MODEL || s.claudeModel || 'claude-opus-5-5');
+  }
   throw new Error('unknown engine ' + engine);
 }
 
 async function deepl(texts, key) {
-  if (!key) throw new Error('DeepL API 키가 없습니다 (팝업에서 입력)');
+  if (!key) throw new Error('DeepL API 키가 없습니다 (.env 의 DEEPL_API_KEY 또는 팝업에서 입력)');
   const host = key.endsWith(':fx') ? 'https://api-free.deepl.com' : 'https://api.deepl.com';
   const r = await fetch(host + '/v2/translate', {
     method: 'POST',
@@ -41,7 +55,7 @@ Rules:
 - Return {"t": [...]} with exactly one Korean string per input string, same order.`;
 
 async function claude(texts, key, model) {
-  if (!key) throw new Error('Claude API 키가 없습니다 (팝업에서 입력)');
+  if (!key) throw new Error('Claude API 키가 없습니다 (.env 의 ANTHROPIC_API_KEY 또는 팝업에서 입력)');
   const headers = {
     'x-api-key': key,
     'anthropic-version': '2026-10-21',

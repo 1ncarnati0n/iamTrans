@@ -1,6 +1,6 @@
 // node test.js
 const assert = require('assert');
-const { splitPH, shouldTranslate, toDeeplHtml, fromDeeplHtml, distribute } = require('./lib.js');
+const { splitPH, shouldTranslate, toDeeplHtml, fromDeeplHtml, distribute, parseEnv } = require('./lib.js');
 
 assert.deepStrictEqual(splitPH('Call ⟦0⟧ then ⟦1⟧.'), ['Call ', { id: 0 }, ' then ', { id: 1 }, '.']);
 assert.deepStrictEqual(splitPH('⟦0⟧'), [{ id: 0 }]);
@@ -46,5 +46,9 @@ assert.strictEqual(distribute('⟦1⟧나⟦/1⟧ 그리고 ⟦0⟧가⟦/0⟧',
 assert.strictEqual(distribute('문서를 읽으세요', { '-1': [0], 0: [] }), null);
 // unbalanced -> fallback
 assert.strictEqual(distribute('⟦0⟧문서 읽기', { '-1': [0], 0: [] }), null);
+
+assert.deepStrictEqual(
+  parseEnv('# keys\nDEEPL_API_KEY=abc:fx\r\n\nexport ANTHROPIC_API_KEY = "sk-ant-x"\nCLAUDE_MODEL=\'claude-haiku-5-5\'\n#X=1'),
+  { DEEPL_API_KEY: 'abc:fx', ANTHROPIC_API_KEY: 'sk-ant-x', CLAUDE_MODEL: 'claude-haiku-5-5' });
 
 console.log('ok');

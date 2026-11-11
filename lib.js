@@ -75,6 +75,12 @@
     return out;
   }
 
-  g.IAT = { splitPH, shouldTranslate, toDeeplHtml, fromDeeplHtml, distribute };
+  // KEY=value lines; # comments, blank lines and surrounding quotes ignored.
+  const parseEnv = (text) =>
+    Object.fromEntries(text.split(/\r?\n/)
+      .map((l) => l.match(/^\s*(?:export\s+)?([\w.]+)\s*=\s*(.*?)\s*$/)).filter(Boolean)
+      .map(([, k, v]) => [k, v.replace(/^(['"])(.*)\1$/, '$2')]));
+
+  g.IAT = { splitPH, shouldTranslate, toDeeplHtml, fromDeeplHtml, distribute, parseEnv };
   if (typeof module !== 'undefined') module.exports = g.IAT;
 })(globalThis);

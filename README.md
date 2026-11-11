@@ -32,10 +32,30 @@
 3. **압축해제된 확장 프로그램을 로드합니다**를 눌러 `iamTrans` 폴더를 선택합니다.
 4. 설치 전에 열려 있던 탭은 새로고침해야 동작합니다.
 
+## API 키 설정 (.env)
+
+DeepL·Claude 키는 확장 폴더의 `.env` 파일로 관리하는 것을 권장합니다. 크롬 화면에 키를 입력하지 않아도 되고, 크롬 동기화·백업에도 섞이지 않습니다.
+
+```sh
+cp .env.example .env   # manifest.json 과 같은 폴더
+```
+
+```
+DEEPL_API_KEY=xxxxxxxx:fx
+ANTHROPIC_API_KEY=sk-ant-...
+CLAUDE_MODEL=claude-opus-5-5   # 선택, 저렴하게: claude-haiku-5-5
+```
+
+- 저장한 뒤 `chrome://extensions`에서 iamTrans를 **새로고침**하세요.
+- `.env`에 있는 값은 팝업 입력보다 우선하며, 팝업에는 ".env 에서 불러옴"으로 표시됩니다(값은 표시되지 않음).
+- `.env`는 `.gitignore`에 들어 있어 커밋되지 않습니다. 웹페이지에서는 읽을 수 없고, 확장의 백그라운드만 읽습니다.
+- 디스크에는 평문으로 저장되므로, 이 확장 전용 키를 발급하고 Anthropic workspace 지출 한도와 DeepL 사용량 한도를 걸어 두세요.
+- 확장 폴더를 zip 등으로 남에게 줄 때는 `.env`를 빼야 합니다.
+
 ## 사용법
 
 1. 툴바의 iamTrans 아이콘을 눌러 팝업을 엽니다.
-2. 엔진과 표시 모드를 고릅니다. DeepL·Claude는 API 키를 입력합니다(키는 이 브라우저에만 저장됩니다).
+2. 엔진과 표시 모드를 고릅니다. DeepL·Claude 키는 위의 `.env`로 넣거나, 팝업에 직접 입력할 수도 있습니다.
 3. **번역**을 누르면 번역이 시작되고, **원문**을 누르면 원래대로 돌아갑니다.
 
 **단축키** `Alt+A` (macOS는 `Option+A`)로 현재 페이지 번역을 켜고 끌 수 있습니다. 팝업에서 마지막으로 고른 엔진과 모드를 사용합니다.
@@ -52,7 +72,8 @@ Chrome 내장 번역을 처음 쓸 때는 번역 모델을 내려받습니다(�
 |---|---|
 | `manifest.json` | 확장 설정 |
 | `content.js` / `content.css` | 페이지에서 번역할 블록 찾기, 번역문 렌더링 |
-| `background.js` | DeepL / Claude API 호출 (API 키는 여기서만 읽음) |
+| `background.js` | DeepL / Claude API 호출 (API 키는 여기서만 읽음, `.env` 우선) |
+| `.env.example` | API 키 파일 견본 |
 | `popup.html` / `popup.js` | 설정 화면 |
 | `lib.js` | 공용 순수 함수 (자리표시자, 휴리스틱) |
 | `test.js` | 단위 검사: `node test.js` |

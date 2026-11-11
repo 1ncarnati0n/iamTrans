@@ -45,6 +45,15 @@ async function ensureChromeModel() {
   for (const k of ['deeplKey', 'claudeKey', 'claudeModel']) $(k).value = s[k];
   show();
 
+  // Settings provided by .env win; lock those fields so it's clear where the value comes from.
+  const fromEnv = await chrome.runtime.sendMessage({ type: 'envStatus' });
+  for (const k of ['deeplKey', 'claudeKey', 'claudeModel']) {
+    if (!fromEnv?.[k]) continue;
+    $(k).value = '';
+    $(k).disabled = true;
+    $(k).placeholder = '.env 에서 불러옴';
+  }
+
   const cmd = (await chrome.commands.getAll()).find((c) => c.name === 'toggle-translate');
   $('shortcut').textContent = `단축키 ${cmd?.shortcut || '(미지정)'}: 번역 켜기/끄기 · chrome://extensions/shortcuts 에서 변경`;
 
