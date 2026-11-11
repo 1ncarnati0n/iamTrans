@@ -29,7 +29,8 @@ async function run(engine, texts) {
   const e = await env();
   if (engine === 'deepl') return deepl(texts, e.DEEPL_API_KEY || s.deeplKey);
   if (engine === 'claude') {
-    return claude(texts, e.ANTHROPIC_API_KEY || s.claudeKey, e.CLAUDE_MODEL || s.claudeModel || 'claude-opus-5-5');
+    return claude(texts, e.ANTHROPIC_API_KEY || s.claudeKey, e.CLAUDE_MODEL || s.claudeModel || 'claude-opus-5-5',
+      e.ANTHROPIC_WORKSPACE_ID);
   }
   throw new Error('unknown engine ' + engine);
 }
@@ -54,7 +55,7 @@ Rules:
 - Leave code identifiers, file paths, URLs, commands and product names untranslated.
 - Return {"t": [...]} with exactly one Korean string per input string, same order.`;
 
-async function claude(texts, key, model) {
+async function claude(texts, key, model, workspaceId) {
   if (!key) throw new Error('Claude API 키가 없습니다 (.env 의 ANTHROPIC_API_KEY 또는 팝업에서 입력)');
   const headers = {
     'x-api-key': key,
@@ -62,6 +63,8 @@ async function claude(texts, key, model) {
     'content-type': 'application/json',
     'anthropic-dangerous-direct-browser-access': 'true',
   };
+  // Only for credentials spanning several workspaces; a normal sk-ant key is already bound to one.
+  if (workspaceId) headers['anthropic-workspace-id'] = workspaceId;
   const body = {
     model,
     max_tokens: 16000,

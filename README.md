@@ -44,6 +44,7 @@ cp .env.example .env   # manifest.json 과 같은 폴더
 DEEPL_API_KEY=xxxxxxxx:fx
 ANTHROPIC_API_KEY=sk-ant-...
 CLAUDE_MODEL=claude-opus-5-5   # 선택, 저렴하게: claude-haiku-5-5
+ANTHROPIC_WORKSPACE_ID=        # 선택: 여러 워크스페이스에 걸친 자격 증명일 때만 (wrkspc_...)
 ```
 
 - 저장한 뒤 `chrome://extensions`에서 iamTrans를 **새로고침**하세요.
