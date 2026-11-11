@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<style>
+  body { width: 280px; font: 13px system-ui, sans-serif; margin: 12px; }
+  fieldset { border: 1px solid #ddd; border-radius: 6px; margin: 0 0 10px; }
+  label { display: block; margin: 4px 0; }
+  input[type=password], input[type=text] { width: 100%; box-sizing: border-box; }
+  .row { display: flex; gap: 6px; }
+  .row button { flex: 1; padding: 6px; }
+  #status { margin-top: 8px; color: #555; min-height: 1em; }
+  [hidden] { display: none; }
+</style>
+</head>
+<body>
+  <fieldset>
+    <legend>엔진</legend>
+    <label><input type="radio" name="engine" value="chrome"> Chrome 내장 (무료·온디바이스)</label>
+    <label><input type="radio" name="engine" value="deepl"> DeepL</label>
+    <label><input type="radio" name="engine" value="claude"> Claude</label>
+  </fieldset>
+
+  <fieldset id="deeplBox" hidden>
+    <legend>DeepL</legend>
+    <label>API 키 (Free 키는 :fx 로 끝남)<input type="password" id="deeplKey" autocomplete="off"></label>
+  </fieldset>
+
+  <fieldset id="claudeBox" hidden>
+    <legend>Claude</legend>
+    <label>API 키<input type="password" id="claudeKey" autocomplete="off"></label>
+    <label>모델<input type="text" id="claudeModel" list="models"></label>
+    <datalist id="models">
+      <option value="claude-opus-5-5">
+      <option value="claude-sonnet-5-5">
+      <option value="claude-haiku-5-5">
+    </datalist>
+  </fieldset>
+
+  <fieldset>
+    <legend>표시</legend>
+    <label><input type="radio" name="mode" value="bilingual"> 영한 병렬 (원문 + 번역)</label>
+    <label><input type="radio" name="mode" value="replace"> 번역으로 대체</label>
+  </fieldset>
+
+  <div class="row">
+    <button id="go">번역</button>
+    <button id="restore">원문</button>
+  </div>
+  <div id="status"></div>
+  <script src="popup.js"></script>
+</body>
+</html>

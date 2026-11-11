@@ -1,0 +1,27 @@
+/* Bilingual: translation under the original, same font. */
+.iat-t {
+  display: block;
+  margin-top: 0.25em;
+  opacity: 0.85;
+  border-left: 2px solid #8ab4f8;
+  padding-left: 0.5em;
+}
+.iat-toast {
+  position: fixed; right: 16px; bottom: 16px; z-index: 2147483647;
+  background: #202124; color: #fff; font: 13px/1.4 system-ui, sans-serif;
+  padding: 10px 12px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.3); max-width: 360px;
+}
+.iat-toast button { margin-left: 6px; cursor: pointer; }
+
+/* Replace: hide the original's text nodes (font-size 0) and child elements, show only the translation. */
+.iat-replace .iat-src { font-size: 0 !important; }
+.iat-replace .iat-src > :not(.iat-t) { display: none !important; }
+.iat-replace .iat-t {
+  font-size: 1rem;
+  font-size: var(--iat-fs, 1rem);
+  margin-top: 0;
+  opacity: 1;
+  border-left: 0;
+  padding-left: 0;
+}
+.iat-replace .iat-src::marker { font-size: var(--iat-fs, 1rem); }

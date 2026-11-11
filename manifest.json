@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "iamTrans",
+  "version": "0.1.0",
+  "description": "영→한 몰입형 웹페이지 번역 (Chrome 내장 / DeepL / Claude)",
+  "minimum_chrome_version": "138",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://api.deepl.com/*",
+    "https://api-free.deepl.com/*",
+    "https://api.anthropic.com/*"
+  ],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_popup": "popup.html" },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["lib.js", "content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}
